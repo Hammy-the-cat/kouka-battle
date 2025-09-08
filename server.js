@@ -1,6 +1,8 @@
 
 import express from 'express';
 import http from 'http';
+import https from 'https';
+import fs from 'fs';
 import { WebSocketServer } from 'ws';
 import crypto from 'crypto';
 import path from 'path';
@@ -10,9 +12,40 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
+// Optional HTTPS support (if HTTPS=1 and cert files exist)
+const CERT_DIR = path.join(__dirname, 'cert');
+const KEY_PATH = path.join(CERT_DIR, 'server.key');
+const CRT_PATH = path.join(CERT_DIR, 'server.crt');
+
+let server;
+if (process.env.HTTPS === '1' && fs.existsSync(KEY_PATH) && fs.existsSync(CRT_PATH)) {
+  const creds = { key: fs.readFileSync(KEY_PATH), cert: fs.readFileSync(CRT_PATH) };
+  server = https.createServer(creds, app);
+  console.log('HTTPS enabled');
+} else {
+  server = http.createServer(app);
+}
 const wss = new WebSocketServer({ server, path: '/ws' });
 
+// Serve index with optional env injection for PUBLIC_BASE_URL
+const INDEX_PATH = path.join(__dirname, 'public', 'index.html');
+function serveIndex(_req, res) {
+  try {
+    let html = fs.readFileSync(INDEX_PATH, 'utf8');
+    const publicBase = process.env.PUBLIC_BASE_URL || '';
+    const inject = publicBase ? `<script>window.PUBLIC_BASE_URL=${JSON.stringify(publicBase)}</script>` : '';
+    if (inject) html = html.replace('</body>', `${inject}\n</body>`);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (e) {
+    res.status(500).send('Failed to load');
+  }
+}
+app.get('/', serveIndex);
+app.get('/join', serveIndex);
+app.get('/join*', serveIndex);
+
+// Static assets
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
