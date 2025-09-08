@@ -8,6 +8,18 @@
   <meta name="color-scheme" content="light dark">
 </head>
 <body>
+  <!-- Top bar: sticky status -->
+  <div id="topbar">
+    <div class="topbar-inner">
+      <div class="brand neon">Kouka Battle</div>
+      <div class="spacer"></div>
+      <div class="top-items">
+        <span class="badge" id="top-pin">PIN: <b id="pin-top">--</b></span>
+        <span class="badge" id="top-round">Round: <b id="round-top">--</b></span>
+        <span class="badge" id="top-conn">状態: <b id="conn-top">未接続</b></span>
+      </div>
+    </div>
+  </div>
   <div class="container">
     <div class="card">
       <h1>校歌バトル・教室対抗</h1>
@@ -58,7 +70,7 @@
         <div class="grid section">
           <div class="col-8">
             <h3>参加者</h3>
-            <table id="players"></table>
+            <div class="table-wrap"><table id="players"></table></div>
           </div>
           <div class="col-4">
             <h3>準備</h3>
@@ -101,8 +113,8 @@
             </div>
           </div>
           <div class="section">
-            <button id="btn-start" class="primary">ラウンド開始（数秒後）</button>
-            <div class="small">全員が同時に「3…2…1…」でスタートします。</div>
+            <button id="btn-start" class="primary" disabled>ラウンド開始（数秒後）</button>
+            <div class="small" id="start-hint">全員が「準備OK」になると開始できます。</div>
           </div>
         </div>
 
@@ -132,11 +144,17 @@
 
         <div id="view-results" class="section" style="display:none">
           <h3>ランキング</h3>
-          <table id="leaderboard" class="leaderboard"></table>
+          <div class="table-wrap"><table id="leaderboard" class="leaderboard"></table></div>
         </div>
       </div>
     </div>
   </div>
   <script type="module" src="app.js"></script>
+  <!-- Countdown overlay -->
+  <div id="countdown-overlay" style="display:none">
+    <div class="overlay-inner">
+      <div class="overlay-count neon" id="overlay-count">3</div>
+    </div>
+  </div>
 </body>
 </html>

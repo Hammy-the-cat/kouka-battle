@@ -20,8 +20,13 @@ let pitchHz = 0;
 let lastFrameVal = 0;
 let varianceSum = 0;
 let frameN = 0;
+let latestState = null;
+let currentRoundLabel = null;
 
-function setStatus(msg) { const el = qs('#status'); if (el) el.textContent = msg; }
+function setStatus(msg) {
+  const el = qs('#status'); if (el) el.textContent = msg;
+  const top = qs('#conn-top'); if (top) top.textContent = msg;
+}
 
 // ===== WebSocket =====
 function connectWS() {
@@ -34,6 +39,7 @@ function connectWS() {
       case 'room_created': {
         currentPIN = msg.pin; isHost = true;
         qs('#pin-label').textContent = currentPIN;
+        qs('#pin-top').textContent = currentPIN;
         qs('#you-label').textContent = 'Host';
         showLobby(msg.state);
         updateShareSection();
@@ -42,6 +48,7 @@ function connectWS() {
       case 'joined': {
         currentPIN = msg.pin; youId = msg.you; isHost = false;
         qs('#pin-label').textContent = currentPIN;
+        qs('#pin-top').textContent = currentPIN;
         qs('#you-label').textContent = msg.you;
         showLobby(msg.state);
         updateShareSection();
@@ -97,9 +104,24 @@ function hide(el) { if (el) el.style.display = 'none'; }
 function showLobby(state) {
   hide(qs('#view-welcome'));
   show(qs('#view-lobby'));
+  latestState = state || null;
   renderPlayers(state?.players || []);
   const amHost = isHost || !!state?.players?.find((p) => p.id === youId && p.isHost);
   qs('#host-panel').style.display = amHost ? '' : 'none';
+  // Update topbar round label if exists
+  if (state?.rounds?.length) {
+    const r = state.rounds[state.rounds.length - 1];
+    qs('#round-top').textContent = r.label || '進行中';
+  }
+  // Enable start only when all ready
+  if (amHost) {
+    const players = state?.players || [];
+    const allReady = players.length > 0 && players.every(p => p.ready);
+    const btn = qs('#btn-start');
+    const hint = qs('#start-hint');
+    if (btn) btn.disabled = !allReady;
+    if (hint) hint.textContent = allReady ? '開始できます。' : '全員が「準備OK」になると開始できます。';
+  }
 }
 
 function renderPlayers(players) {
@@ -110,7 +132,7 @@ function renderPlayers(players) {
     <tr>
       <td>${p.name}</td>
       <td>${p.headcount}</td>
-      <td>${p.ready ? '✓' : ''}</td>
+      <td><span class="badge ${p.ready ? 'ready' : 'waiting'}">${p.ready ? '準備OK' : '待機中'}</span></td>
       <td>${p.isHost ? '主催' : '教室'}</td>
     </tr>`).join('');
   tbl.innerHTML = head + rows;
@@ -240,6 +262,7 @@ async function onRoundStart(round) {
   show(qs('#view-round'));
   hide(qs('#view-results'));
   qs('#round-title').textContent = `${round.label}（${round.options.seconds}s）`;
+  qs('#round-top').textContent = round.label || '進行中';
 
   await ensureMic();
   if (audioCtx.state === 'suspended') await audioCtx.resume();
@@ -259,17 +282,29 @@ async function onRoundStart(round) {
     guideAudio = a;
   }
 
+  // Ensure canvas fits container (responsive)
+  const canvas = qs('#wave');
+  const resizeCanvas = () => { try { canvas.width = Math.max(300, canvas.clientWidth || 1000); } catch {} };
+  resizeCanvas();
+  const onResize = () => resizeCanvas();
+  window.addEventListener('resize', onResize);
+
   // Countdown until start
   startAt = round.startAt;
   const badge = qs('#timer');
   let waitMs = Math.max(0, startAt - Date.now());
+  const overlay = qs('#countdown-overlay');
+  const overlayTxt = qs('#overlay-count');
+  overlay.style.display = 'grid';
   while (waitMs > 0) {
     const s = Math.ceil(waitMs / 1000);
     badge.textContent = `開始まで ${s}`;
+    overlayTxt.textContent = s;
     await sleep(200);
     waitMs = Math.max(0, startAt - Date.now());
   }
   badge.textContent = `${round.options.seconds}`;
+  overlay.style.display = 'none';
 
   // Start
   running = true;
@@ -301,6 +336,8 @@ async function onRoundStart(round) {
   running = false;
   if (oscNode) { try { oscNode.stop(); } catch {} oscNode.disconnect(); oscNode = null; }
   if (guideAudio) { try { guideAudio.pause(); } catch {} }
+  window.removeEventListener('resize', onResize);
+  qs('#round-top').textContent = '--';
 
   // Calculate metrics
   const rmsScore = Math.max(0, (rmsMax - noiseFloor) / (1 - noiseFloor));
@@ -389,16 +426,19 @@ function renderLeaderboard(items = []) {
     <tr>
       <th>#</th><th>教室</th><th>合計</th><th>声量</th><th>まとまり</th><th>音程</th><th>クリップ率</th>
     </tr>` +
-    items.map((e, i) => `
+    items.map((e, i) => {
+      const medal = i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : '';
+      return `
       <tr>
-        <td>${i + 1}</td>
+        <td>${medal || (i + 1)}</td>
         <td>${e.name}</td>
         <td>${e.score.toFixed(2)}</td>
         <td>${e.metrics.loud.toFixed(2)}</td>
         <td>${e.metrics.unity.toFixed(2)}</td>
         <td>${e.metrics.pitch.toFixed(2)}</td>
         <td>${(e.metrics.clipRate * 100).toFixed(1)}%</td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
 }
 
 // ===== Host share (QR/link) =====
@@ -443,4 +483,3 @@ showLobby = function (state) {
   if (qpin) { qs('#join-pin').value = qpin; }
   updateShareSection();
 };
-
