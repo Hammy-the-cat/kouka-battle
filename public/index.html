@@ -1,34 +1,73 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>校歌バトル（教室対抗）</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anthem Arena</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="声量と音程の一体感を競う “Kouka Battle” のWebアプリ">
 </head>
 <body>
+  <!-- Top bar: sticky status -->
+  <div id="topbar">
+    <div class="topbar-inner">
+      <div class="brand neon">Kouka Battle</div>
+      <div class="spacer"></div>
+      <div class="top-items">
+        <span class="badge" id="top-pin">PIN: <b id="pin-top">--</b></span>
+        <span class="badge" id="top-round">Round: <b id="round-top">--</b></span>
+        <span class="badge" id="top-conn">状態: <b id="conn-top" aria-live="polite">未接続</b></span>
+      </div>
+    </div>
+  </div>
   <div class="container">
     <div class="card">
-      <h1>校歌バトル（教室対抗）</h1>
-      <div id="status" class="small"></div>
+      <h1 class="neon title-center">Anthem Arena</h1>
+      <div id="status" class="small" aria-live="polite"></div>
+
       <div id="view-welcome" class="section">
         <div class="grid">
           <div class="col-6">
-            <h3>① 大会（PIN）を作成（主催者）</h3>
+            <h3>HOST・主催</h3>
             <div class="row">
-              <input id="host-name" placeholder="主催者名（例：音楽科）" />
-              <input id="host-headcount" type="number" min="1" max="60" value="30" />
-              <button id="btn-create" class="primary">大会を作成</button>
+              <div class="field" style="flex:1">
+                <label for="host-name">主催者名</label>
+                <input id="host-name" placeholder="例: 音楽科">
+              </div>
+              <div class="field" style="width: 140px">
+                <label for="host-headcount">人数（目安）</label>
+                <input id="host-headcount" type="number" min="1" max="60" value="30">
+              </div>
+              <div class="field" style="min-width:180px">
+                <label class="invisible">&nbsp;</label>
+                <button id="btn-create" class="primary" style="width:100%">大会を作る</button>
+              </div>
             </div>
+            <div class="small notice">主催はPINを共有して参加者を集めます。</div>
           </div>
           <div class="col-6">
-            <h3>② PINで入室（各教室）</h3>
+            <h3>GUEST・参加</h3>
             <div class="row">
-              <input id="join-pin" placeholder="大会PIN（6桁）" />
-              <input id="join-name" placeholder="教室名（例：1年1組）" />
-              <input id="join-headcount" type="number" min="1" max="60" value="30" />
-              <button id="btn-join" class="primary">入室</button>
+              <div class="field" style="width:140px">
+                <label for="join-pin">大会PIN</label>
+                <input id="join-pin" inputmode="numeric" maxlength="6" placeholder="6桁">
+              </div>
+              <div class="field" style="flex:1">
+                <label for="join-name">教室名</label>
+                <input id="join-name" placeholder="例: 3年1組">
+              </div>
+              <div class="field" style="width:140px">
+                <label for="join-headcount">人数（目安）</label>
+                <input id="join-headcount" type="number" min="1" max="60" value="30">
+              </div>
+              <div class="field" style="min-width:140px">
+                <label class="invisible">&nbsp;</label>
+                <button id="btn-join" class="primary" style="width:100%">入室</button>
+              </div>
             </div>
+            <div id="join-error" class="small error" aria-live="polite" style="display:none"></div>
+            <div class="small">スマホ/PCのマイク許可を有効にして参加してください。</div>
           </div>
         </div>
       </div>
@@ -39,15 +78,29 @@
           <div><span class="badge">あなた</span> <b id="you-label"></b></div>
         </div>
 
+        <div id="host-share" class="card section" style="display:none">
+          <h3>参加用リンク</h3>
+          <div class="row">
+            <input id="join-link" readonly style="flex:1">
+            <button id="btn-open-link">リンクを開く</button>
+            <button id="btn-copy-link">コピー</button>
+          </div>
+          <div class="section">
+            <img id="qr-img" alt="QRコード" style="background:#fff; padding:8px; max-width:240px;">
+            <div id="qr-fallback" class="small" style="display:none">QRを表示できません。上のリンクを開くか、コピーして配布してください。</div>
+            <div class="small">スマホでQRを読み取り → マイク許可で参加</div>
+          </div>
+        </div>
+
         <div class="grid section">
           <div class="col-8">
             <h3>参加者</h3>
-            <table id="players"></table>
+            <div class="table-wrap"><table id="players"></table></div>
           </div>
           <div class="col-4">
             <h3>準備</h3>
             <div class="section">
-              <button id="btn-calibrate">静音キャリブ（5秒）</button>
+              <button id="btn-calibrate">静音キャリブ（約5秒）</button>
               <div class="small">周囲が静かな状態で実行してください。</div>
               <div id="calib-result" class="small"></div>
             </div>
@@ -55,9 +108,13 @@
               <button id="btn-ready" class="primary">準備OK</button>
             </div>
             <div class="section">
-              <label class="small">人数（正規化に使用）</label>
-              <input id="input-headcount" type="number" min="1" max="60" value="30" />
-              <button id="btn-save-headcount">人数を保存</button>
+              <div class="field">
+                <label class="small" for="input-headcount">人数（正規化に使用）</label>
+                <div class="row">
+                  <input id="input-headcount" type="number" min="1" max="60" value="30" style="width:140px">
+                  <button id="btn-save-headcount">人数を保存</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -66,27 +123,27 @@
           <h3>主催者パネル</h3>
           <div class="grid">
             <div class="col-6">
-              <label>ラウンド名</label>
-              <input id="round-label" value="サビ（10s）" />
+              <label for="round-label">ラウンド名</label>
+              <input id="round-label" placeholder="例: サンプル">
             </div>
             <div class="col-6">
-              <label>長さ（秒）</label>
-              <input id="round-seconds" type="number" value="10" min="5" max="20" />
+              <label for="round-seconds">長さ（秒）</label>
+              <input id="round-seconds" type="number" value="10" min="5" max="20">
             </div>
           </div>
           <div class="grid section">
             <div class="col-6">
               <div class="small">ガイド音（A3=220Hz）</div>
-              <label><input type="checkbox" id="opt-osc" checked /> 再生する</label>
+              <label><input type="checkbox" id="opt-osc" checked> 再生する</label>
             </div>
             <div class="col-6">
-              <div class="small">ガイド音源（ローカルMP3/WAVを各教室で選択可）</div>
-              <input id="opt-file" type="file" accept="audio/*" />
+              <div class="small">ガイド音源（各教室でローカルMP3/WAVを選択可）</div>
+              <input id="opt-file" type="file" accept="audio/*">
             </div>
           </div>
           <div class="section">
-            <button id="btn-start" class="primary">ラウンド開始（3秒後）</button>
-            <div class="small">全員が同時に3…2…1…でスタートします。</div>
+            <button id="btn-start" class="primary" disabled>ラウンド開始（数秒後）</button>
+            <div class="small" id="start-hint">全員が「準備OK」になると開始できます。</div>
           </div>
         </div>
 
@@ -102,7 +159,7 @@
             <div class="col-4">
               <div>RMS <span id="rms-val">0</span></div>
               <div>Peak <span id="peak-val">0</span></div>
-              <div>Clip率 <span id="clip-val">0%</span></div>
+              <div>クリップ率 <span id="clip-val">0%</span></div>
             </div>
             <div class="col-4">
               <div>推定ピッチ <span id="pitch-val">-</span> Hz</div>
@@ -116,11 +173,19 @@
 
         <div id="view-results" class="section" style="display:none">
           <h3>ランキング</h3>
-          <table id="leaderboard" class="leaderboard"></table>
+          <div class="table-wrap"><table id="leaderboard" class="leaderboard"></table></div>
         </div>
       </div>
     </div>
   </div>
   <script type="module" src="app.js"></script>
+  <!-- Countdown overlay -->
+  <div id="countdown-overlay" style="display:none">
+    <div class="overlay-inner">
+      <div class="overlay-count neon" id="overlay-count">3</div>
+    </div>
+  </div>
+  <!-- Toasts -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>
