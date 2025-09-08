@@ -85,6 +85,14 @@ table { width:100%; border-collapse: collapse; }
 td, th { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: left; }
 .table-wrap { overflow-x: auto; }
 
+/* Larger leaderboard */
+.leaderboard { font-size: 20px; }
+.leaderboard td, .leaderboard th { padding: 14px 16px; }
+.leaderboard tr td:nth-child(3) { /* 合計 */ font-weight: 800; text-shadow: var(--glow); }
+@media (max-width: 640px) { .leaderboard { font-size: 18px; } }
+
+#view-results h3 { font-size: 26px; }
+
 /* Topbar */
 #topbar { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(6px); background: linear-gradient(180deg, rgba(10,14,28,0.95), rgba(10,14,28,0.6)); border-bottom: 1px solid var(--panel-border); }
 .topbar-inner { max-width: 1100px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
