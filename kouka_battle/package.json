@@ -1,0 +1,21 @@
+{
+  "name": "kouka-battle",
+  "version": "1.0.0",
+  "description": "Classroom vs classroom 'School Song Battle' - microphone-based multiplayer with PIN rooms",
+  "main": "server.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "ngrok:setup": "powershell -ExecutionPolicy Bypass -File scripts/ngrok-setup.ps1",
+    "tunnel": "powershell -ExecutionPolicy Bypass -File scripts/start-with-ngrok.ps1",
+    "tunnel:cf": "powershell -ExecutionPolicy Bypass -File scripts/start-with-cloudflared.ps1"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}

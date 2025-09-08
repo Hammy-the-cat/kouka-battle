@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>校歌バトル・教室対抗</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="color-scheme" content="light dark">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>校歌バトル・教室対抗</h1>
+      <div id="status" class="small"></div>
+
+      <div id="view-welcome" class="section">
+        <div class="grid">
+          <div class="col-6">
+            <h3>① 大会ルームを作成（主催者）</h3>
+            <div class="row">
+              <input id="host-name" placeholder="主催者名（例: 音楽科）">
+              <input id="host-headcount" type="number" min="1" max="60" value="30">
+              <button id="btn-create" class="primary">大会を作る</button>
+            </div>
+          </div>
+          <div class="col-6">
+            <h3>② PINで入室（各教室）</h3>
+            <div class="row">
+              <input id="join-pin" placeholder="大会PIN（6桁）">
+              <input id="join-name" placeholder="教室名（例: 3年1組）">
+              <input id="join-headcount" type="number" min="1" max="60" value="30">
+              <button id="btn-join" class="primary">入室</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-lobby" class="section" style="display:none">
+        <div class="row">
+          <div><span class="badge">PIN</span> <b id="pin-label"></b></div>
+          <div><span class="badge">あなた</span> <b id="you-label"></b></div>
+        </div>
+
+        <div id="host-share" class="card section" style="display:none">
+          <h3>参加用リンク</h3>
+          <div class="row">
+            <input id="join-link" readonly style="flex:1">
+            <button id="btn-open-link">リンクを開く</button>
+            <button id="btn-copy-link">コピー</button>
+          </div>
+          <div class="section">
+            <img id="qr-img" alt="QRコード" style="background:#fff; padding:8px; max-width:240px;">
+            <div id="qr-fallback" class="small" style="display:none">QRが読み込めません。上のリンクを開くか、コピーして配布してください。</div>
+            <div class="small">スマホでQRを読み取り → マイク許可で参加</div>
+          </div>
+        </div>
+
+        <div class="grid section">
+          <div class="col-8">
+            <h3>参加者</h3>
+            <table id="players"></table>
+          </div>
+          <div class="col-4">
+            <h3>準備</h3>
+            <div class="section">
+              <button id="btn-calibrate">静音キャリブ（5秒）</button>
+              <div class="small">周囲が静かな状態で実行してください。</div>
+              <div id="calib-result" class="small"></div>
+            </div>
+            <div class="section">
+              <button id="btn-ready" class="primary">準備OK</button>
+            </div>
+            <div class="section">
+              <label class="small">人数（正規化に使用）</label>
+              <input id="input-headcount" type="number" min="1" max="60" value="30">
+              <button id="btn-save-headcount">人数を保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="host-panel" class="card section" style="display:none">
+          <h3>主催者パネル</h3>
+          <div class="grid">
+            <div class="col-6">
+              <label>ラウンド名</label>
+              <input id="round-label" value="サビ">
+            </div>
+            <div class="col-6">
+              <label>長さ（秒）</label>
+              <input id="round-seconds" type="number" value="10" min="5" max="20">
+            </div>
+          </div>
+          <div class="grid section">
+            <div class="col-6">
+              <div class="small">ガイド音（A3=220Hz）</div>
+              <label><input type="checkbox" id="opt-osc" checked> 再生する</label>
+            </div>
+            <div class="col-6">
+              <div class="small">ガイド音源（各教室でローカルMP3/WAVを選択可）</div>
+              <input id="opt-file" type="file" accept="audio/*">
+            </div>
+          </div>
+          <div class="section">
+            <button id="btn-start" class="primary">ラウンド開始（数秒後）</button>
+            <div class="small">全員が同時に「3…2…1…」でスタートします。</div>
+          </div>
+        </div>
+
+        <div id="view-round" class="section" style="display:none">
+          <h3 id="round-title">ラウンド</h3>
+          <div class="row">
+            <div class="meter" style="flex:1"><div id="meter-bar"></div></div>
+            <div class="badge" id="timer">--</div>
+          </div>
+          <canvas id="wave" class="wave section" width="1000" height="120"></canvas>
+
+          <div class="grid section">
+            <div class="col-4">
+              <div>RMS <span id="rms-val">0</span></div>
+              <div>Peak <span id="peak-val">0</span></div>
+              <div>クリップ率 <span id="clip-val">0%</span></div>
+            </div>
+            <div class="col-4">
+              <div>推定ピッチ <span id="pitch-val">-</span> Hz</div>
+              <div>音程誤差 <span id="cents-val">-</span> ¢</div>
+            </div>
+            <div class="col-4">
+              <div>人数補正 <span id="norm-val">/ 人数</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="view-results" class="section" style="display:none">
+          <h3>ランキング</h3>
+          <table id="leaderboard" class="leaderboard"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
