@@ -251,7 +251,7 @@ qs('#btn-start').onclick = () => {
   ws.send(JSON.stringify({
     type: 'start_round',
     label,
-    delayMs: 3000,
+    delayMs: Math.max(0, Math.min(30, Number(qs('#round-delay')?.value || 10))) * 1000,
     options: { seconds, useOsc, targetHz: 220 }
   }));
 };
