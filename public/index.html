@@ -138,7 +138,11 @@
             </div>
             <div class="col-6">
               <div class="small">ガイド音源（各教室でローカルMP3/WAVを選択可）</div>
-              <input id="opt-file" type="file" accept="audio/*">
+              <div class="row">
+                <input id="opt-file" type="file" accept="audio/*" style="flex:1">
+                <button id="btn-test-guide">再生テスト</button>
+              </div>
+              <div id="guide-file-name" class="small"></div>
             </div>
           </div>
           <div class="section">

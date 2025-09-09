@@ -14,6 +14,7 @@ let audioCtx, analyser, micSource, timeArray;
 let running = false, startAt = 0, endAt = 0;
 let oscNode = null;
 let guideAudio = null;
+let guideAudioUnlocked = false;
 let clipCount = 0, sampleCount = 0;
 let rmsMax = 0, peakMax = 0;
 let pitchHz = 0;
@@ -300,7 +301,7 @@ async function onRoundStart(round) {
   if (fileInput?.files?.[0]) {
     const url = URL.createObjectURL(fileInput.files[0]);
     const a = new Audio(url);
-    a.loop = false;
+    a.loop = true;
     a.volume = 0.6;
     guideAudio = a;
   }
@@ -342,7 +343,27 @@ async function onRoundStart(round) {
     oscNode.connect(gain).connect(audioCtx.destination);
     oscNode.start();
   }
-  if (guideAudio) { try { guideAudio.currentTime = 0; await guideAudio.play(); } catch {} }
+  if (guideAudio) {
+    try {
+      guideAudio.currentTime = 0;
+      await guideAudio.play();
+    } catch (e) {
+      showToast('ガイド音源の再生に失敗しました（自動再生制限の可能性）', 'warn');
+      if (!useOsc) {
+        // Fallback to oscillator if not enabled
+        try {
+          oscNode = audioCtx.createOscillator();
+          oscNode.type = 'sine';
+          oscNode.frequency.value = targetHz;
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0.08;
+          oscNode.connect(gain).connect(audioCtx.destination);
+          oscNode.start();
+          showToast('ガイド音（発振）に切替えました', 'info');
+        } catch {}
+      }
+    }
+  }
 
   const durMs = (round.options.seconds || 10) * 1000;
   endAt = startAt + durMs;
@@ -549,5 +570,48 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('コピーに失敗しました', 'error');
       }
     };
+  }
+
+  // File selector: preload and try to unlock playback on user gesture
+  const fileEl = qs('#opt-file');
+  const fileNameEl = qs('#guide-file-name');
+  if (fileEl) {
+    fileEl.addEventListener('change', async () => {
+      guideAudioUnlocked = false;
+      guideAudio = null;
+      if (fileEl.files && fileEl.files[0]) {
+        const f = fileEl.files[0];
+        if (fileNameEl) fileNameEl.textContent = `選択中: ${f.name}`;
+        try {
+          const url = URL.createObjectURL(f);
+          const a = new Audio(url);
+          a.loop = true; a.volume = 0.6;
+          guideAudio = a;
+          // Try unlocking by quick play/pause (within user gesture of file selection)
+          try { await a.play(); a.pause(); guideAudioUnlocked = true; showToast('ガイド音源を準備しました', 'success'); } catch {}
+        } catch (e) {
+          showToast('音源の準備に失敗しました', 'error');
+        }
+      } else {
+        if (fileNameEl) fileNameEl.textContent = '';
+      }
+    });
+  }
+
+  // Test play button for guide audio
+  const testBtn = qs('#btn-test-guide');
+  if (testBtn) {
+    testBtn.addEventListener('click', async () => {
+      try { if (audioCtx?.state === 'suspended') await audioCtx.resume(); } catch {}
+      if (!guideAudio) { showToast('音源ファイルを選択してください', 'warn'); return; }
+      try {
+        guideAudio.currentTime = 0;
+        await guideAudio.play();
+        showToast('ガイド再生中', 'success');
+        setTimeout(() => { try { guideAudio.pause(); } catch {} }, 1200);
+      } catch (e) {
+        showToast('再生がブロックされました（ページを一度タップしてから再試行）', 'error');
+      }
+    });
   }
 });
