@@ -78,7 +78,12 @@ function getPublicState(pin) {
   const room = rooms.get(pin);
   if (!room) return null;
   const players = [...room.players.values()].map(p => ({
-    id: p.id, name: p.name, headcount: p.headcount, ready: p.ready, isHost: p.isHost
+    id: p.id,
+    name: p.name,
+    headcount: p.headcount,
+    ready: p.ready,
+    isHost: p.isHost
+    // live metrics are broadcast separately to keep state light
   }));
   return {
     pin: room.pin,
@@ -189,6 +194,24 @@ wss.on('connection', (ws) => {
       // sort
       room.leaderboard.sort((a,b)=> b.score - a.score);
       broadcast(pin, { type: 'leaderboard', leaderboard: room.leaderboard });
+      return;
+    }
+
+    // LIVE METRICS (lightweight, broadcast as separate message)
+    if (msg.type === 'live') {
+      const pin = ws._ctx.pin;
+      const room = rooms.get(pin);
+      if (!room) return;
+      const p = room.players.get(clientId);
+      if (!p) return;
+      const live = {
+        relRms: Number(msg.live?.relRms ?? 0) || 0,
+        pitchOk: !!msg.live?.pitchOk,
+        clipping: !!msg.live?.clipping,
+        t: Date.now()
+      };
+      p.live = live;
+      broadcast(pin, { type: 'live', playerId: p.id, live });
       return;
     }
 

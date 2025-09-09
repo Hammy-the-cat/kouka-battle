@@ -153,12 +153,23 @@ button.primary:hover { filter: brightness(1.06); }
 /* Table: sticky header + column widths */
 .table-wrap { overflow: auto; max-height: 360px; }
 #players th { position: sticky; top: 0; background: #0e1840; z-index: 1; }
-#players th:nth-child(1), #players td:nth-child(1) { width: 50%; }
-#players th:nth-child(2), #players td:nth-child(2) { width: 16%; }
+#players th:nth-child(1), #players td:nth-child(1) { width: 40%; }
+#players th:nth-child(2), #players td:nth-child(2) { width: 12%; }
 #players th:nth-child(3), #players td:nth-child(3) { width: 18%; }
-#players th:nth-child(4), #players td:nth-child(4) { width: 16%; }
+#players th:nth-child(4), #players td:nth-child(4) { width: 12%; }
+#players th:nth-child(5), #players td:nth-child(5) { width: 18%; }
 
 /* Emphasize timer and meter */
 #timer.badge { font-size: 28px; padding: 8px 12px; font-weight: 800; }
 .meter { height: 28px; }
 @media (max-width: 640px) { #timer.badge { font-size: 24px; } .meter { height: 24px; } }
+
+/* Live mini meter and dots */
+.mini-meter { height: 8px; background: #0a0f20; border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; width: 100%; }
+.mini-meter > .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00f2fe, #4facfe); transition: width 0.15s linear; }
+.live-cell { display: flex; align-items: center; gap: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.25); background: #555; }
+.dot.pitch-ok { background: #4fd1c5; box-shadow: 0 0 10px rgba(79,209,197,0.6); }
+.dot.pitch-bad { background: #ffd86a; box-shadow: 0 0 10px rgba(255,216,106,0.5); }
+.dot.clip { background: #ff6b9b; box-shadow: 0 0 10px rgba(255,107,155,0.6); }
+.stale .bar { background: #39465f !important; }

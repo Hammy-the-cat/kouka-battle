@@ -23,6 +23,8 @@ let varianceSum = 0;
 let frameN = 0;
 let latestState = null;
 let currentRoundLabel = null;
+let liveMap = Object.create(null); // { playerId: { relRms, pitchOk, clipping, t } }
+let lastLiveSentAt = 0;
 
 function setStatus(msg) {
   const el = qs('#status'); if (el) el.textContent = msg;
@@ -91,6 +93,13 @@ function connectWS() {
         renderLeaderboard(msg.leaderboard);
         break;
       }
+      case 'live': {
+        if (msg && msg.playerId && msg.live) {
+          liveMap[msg.playerId] = msg.live;
+          updateLiveRow(msg.playerId, msg.live);
+        }
+        break;
+      }
       case 'error': {
         alert(msg.message);
         break;
@@ -151,15 +160,44 @@ function showLobby(state) {
 function renderPlayers(players) {
   const tbl = qs('#players');
   if (!tbl) return;
-  const head = '<tr><th>名前</th><th>人数</th><th>準備</th><th>役割</th></tr>';
+  const head = '<tr><th>名前</th><th>人数</th><th>準備</th><th>役割</th><th>状況</th></tr>';
   const rows = players.map((p) => `
-    <tr>
+    <tr data-id="${p.id}">
       <td>${p.name}</td>
       <td>${p.headcount}</td>
       <td><span class="badge ${p.ready ? 'ready' : 'waiting'}">${p.ready ? '準備OK' : '待機中'}</span></td>
       <td>${p.isHost ? '主催' : '教室'}</td>
+      <td class="live-cell">
+        <div class="mini-meter"><div class="bar" style="width:0%"></div></div>
+        <span class="dot" title="pitch"></span>
+        <span class="dot" title="clip"></span>
+      </td>
     </tr>`).join('');
   tbl.innerHTML = head + rows;
+  // Apply any known live values
+  players.forEach((p) => { if (liveMap[p.id]) updateLiveRow(p.id, liveMap[p.id]); });
+}
+
+function updateLiveRow(pid, live) {
+  const tr = qs(`#players tr[data-id="${pid}"]`);
+  if (!tr) return;
+  const cell = tr.querySelector('.live-cell');
+  if (!cell) return;
+  const bar = cell.querySelector('.bar');
+  const dots = cell.querySelectorAll('.dot');
+  if (bar) bar.style.width = `${Math.min(100, Math.max(0, (live.relRms || 0) * 100))}%`;
+  // dots[0] = pitch, dots[1] = clip
+  if (dots[0]) {
+    dots[0].classList.remove('pitch-ok','pitch-bad');
+    dots[0].classList.add(live.pitchOk ? 'pitch-ok' : 'pitch-bad');
+  }
+  if (dots[1]) {
+    dots[1].classList.toggle('clip', !!live.clipping);
+  }
+  // stale marker
+  const stale = (Date.now() - (live.t || 0)) > 2000;
+  const meter = cell.querySelector('.mini-meter');
+  if (meter) meter.classList.toggle('stale', stale);
 }
 
 // ===== Events =====
@@ -457,6 +495,21 @@ function drawLoop(sampleRate, targetHz) {
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
+
+    // Throttled live update to server
+    try {
+      const now = Date.now();
+      if (ws && ws.readyState === 1 && (now - lastLiveSentAt) >= 200) {
+        lastLiveSentAt = now;
+        const live = {
+          relRms: Math.max(0, Math.min(1, relRms)),
+          pitchOk: isFinite(cents) && Math.abs(cents) <= 50,
+          clipping: clips > 0,
+          t: now
+        };
+        ws.send(JSON.stringify({ type: 'live', live }));
+      }
+    } catch {}
 
     requestAnimationFrame(loop);
   })();
